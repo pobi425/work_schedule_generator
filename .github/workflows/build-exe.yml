@@ -29,6 +29,10 @@ jobs:
       run: |
         pyinstaller build_exe.spec --clean
 
+    - name: Copy debug batch file
+      run: |
+        copy run_debug.bat dist\run_debug.bat
+
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
