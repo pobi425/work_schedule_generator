@@ -1,15 +1,19 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_all
 
 block_cipher = None
+
+# OR-Tools 전체 수집
+datas_ortools, binaries_ortools, hiddenimports_ortools = collect_all('ortools')
 
 a = Analysis(
     ['app.py'],
     pathex=[],
-    binaries=[],
+    binaries=binaries_ortools,
     datas=[
         ('templates', 'templates'),
         ('static', 'static'),
-    ],
+    ] + datas_ortools,
     hiddenimports=[
         'flask',
         'werkzeug',
@@ -17,7 +21,7 @@ a = Analysis(
         'ortools.sat',
         'ortools.sat.python',
         'ortools.sat.python.cp_model',
-    ],
+    ] + hiddenimports_ortools,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

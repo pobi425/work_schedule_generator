@@ -26,7 +26,7 @@ pip install Flask>=3.0.0 ortools>=9.10.0 Werkzeug>=3.0.0 pyinstaller
 echo.
 
 echo [4/5] Building EXE file... (This may take several minutes)
-pyinstaller --collect-all ortools build_exe.spec --clean
+pyinstaller build_exe.spec --clean
 echo.
 
 echo [5/5] Build complete!
