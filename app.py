@@ -16,7 +16,7 @@ def index():
     """메인 페이지"""
     # 현재 날짜 기본값
     now = datetime.now()
-    return render_template('index.html',
+    return render_template('index_new.html',
                          current_year=now.year,
                          current_month=now.month)
 

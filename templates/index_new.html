@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html class="light" lang="ko">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>사회복무요원 근무표 생성기</title>
+    <!-- Tailwind CSS 4.0.0 Stable -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .modal { display: none; }
+        .modal.active { display: flex; }
+        .calendar-cell { min-height: 100px; cursor: pointer; transition: all 0.2s; }
+        .calendar-cell:hover { background-color: #f0f9ff; }
+        .worker-badge {
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin: 2px;
+            display: inline-block;
+        }
+        .day-worker { background-color: #3b82f6; color: white; }
+        .night-worker { background-color: #8b5cf6; color: white; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark">
+    <div class="relative flex min-h-screen w-full flex-col font-display">
+        <div class="layout-container flex h-full grow flex-col">
+            <div class="flex flex-1 justify-center p-4 sm:p-6 md:p-8">
+                <div class="layout-content-container flex flex-col w-full max-w-7xl flex-1">
+
+                    <!-- 상단 네비게이션 -->
+                    <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-[#dbdfe6] dark:border-gray-700 px-6 py-4 bg-white dark:bg-gray-800 rounded-lg">
+                        <div class="flex items-center gap-4 text-[#333333] dark:text-gray-200">
+                            <div class="text-primary size-6">
+                                <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                                    <path clip-rule="evenodd" d="M12.0799 24L4 19.2479L9.95537 8.75216L18.04 13.4961L18.0446 4H29.9554L29.96 13.4961L38.0446 8.75216L44 19.2479L35.92 24L44 28.7521L38.0446 39.2479L29.96 34.5039L29.9554 44H18.0446L18.04 34.5039L9.95537 39.2479L4 28.7521L12.0799 24Z" fill="currentColor" fill-rule="evenodd"></path>
+                                </svg>
+                            </div>
+                            <h2 class="text-xl font-bold tracking-[-0.015em]">사회복무요원 근무표 생성기</h2>
+                        </div>
+                        <button onclick="openWorkerManagementModal()" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary/20 hover:bg-primary/30 text-primary text-sm font-bold leading-normal tracking-[0.015em]">
+                            <span class="truncate">근무자관리</span>
+                        </button>
+                    </header>
+
+                    <!-- 메인 컨텐츠: 달력 -->
+                    <main class="flex-grow mt-6">
+                        <div class="flex flex-col gap-6 p-4 sm:p-6 bg-white dark:bg-gray-800 rounded-lg">
+
+                            <!-- 달력 헤더 -->
+                            <div class="flex items-center p-1 justify-between">
+                                <button onclick="previousMonth()" class="hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+                                    <div class="text-[#333333] dark:text-gray-200 flex size-10 items-center justify-center">
+                                        <span class="material-symbols-outlined">chevron_left</span>
+                                    </div>
+                                </button>
+                                <button onclick="openDatePickerModal()" id="calendarTitle" class="text-[#333333] dark:text-gray-200 text-xl font-bold leading-tight flex-1 text-center py-2 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    2025년 11월
+                                </button>
+                                <button onclick="nextMonth()" class="hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+                                    <div class="text-[#333333] dark:text-gray-200 flex size-10 items-center justify-center">
+                                        <span class="material-symbols-outlined">chevron_right</span>
+                                    </div>
+                                </button>
+                            </div>
+
+                            <!-- 달력 그리드 -->
+                            <div id="calendarGrid" class="grid grid-cols-7 border-t border-l border-[#dbdfe6] dark:border-gray-700">
+                                <!-- 요일 헤더 -->
+                                <p class="text-[#7D8B99] dark:text-gray-400 text-sm font-bold flex h-12 w-full items-center justify-center border-b border-r border-[#dbdfe6] dark:border-gray-700 bg-background-light dark:bg-gray-900">일</p>
+                                <p class="text-[#7D8B99] dark:text-gray-400 text-sm font-bold flex h-12 w-full items-center justify-center border-b border-r border-[#dbdfe6] dark:border-gray-700 bg-background-light dark:bg-gray-900">월</p>
+                                <p class="text-[#7D8B99] dark:text-gray-400 text-sm font-bold flex h-12 w-full items-center justify-center border-b border-r border-[#dbdfe6] dark:border-gray-700 bg-background-light dark:bg-gray-900">화</p>
+                                <p class="text-[#7D8B99] dark:text-gray-400 text-sm font-bold flex h-12 w-full items-center justify-center border-b border-r border-[#dbdfe6] dark:border-gray-700 bg-background-light dark:bg-gray-900">수</p>
+                                <p class="text-[#7D8B99] dark:text-gray-400 text-sm font-bold flex h-12 w-full items-center justify-center border-b border-r border-[#dbdfe6] dark:border-gray-700 bg-background-light dark:bg-gray-900">목</p>
+                                <p class="text-[#7D8B99] dark:text-gray-400 text-sm font-bold flex h-12 w-full items-center justify-center border-b border-r border-[#dbdfe6] dark:border-gray-700 bg-background-light dark:bg-gray-900">금</p>
+                                <p class="text-[#7D8B99] dark:text-gray-400 text-sm font-bold flex h-12 w-full items-center justify-center border-b border-r border-[#dbdfe6] dark:border-gray-700 bg-background-light dark:bg-gray-900">토</p>
+
+                                <!-- 달력 날짜들 (JavaScript로 동적 생성) -->
+                            </div>
+
+                            <!-- 상태 메시지 -->
+                            <div id="statusMessage" class="flex flex-col p-4 mt-6">
+                                <div class="flex flex-col items-center gap-6 rounded-lg border-2 border-dashed border-[#dbdfe6] dark:border-gray-700 px-6 py-14">
+                                    <div class="flex max-w-[480px] flex-col items-center gap-2">
+                                        <p class="text-[#333333] dark:text-gray-200 text-lg font-bold tracking-[-0.015em] text-center">근무가 배치되지 않았습니다</p>
+                                        <p class="text-[#7D8B99] dark:text-gray-400 text-sm font-normal leading-normal text-center">하단의 버튼을 사용하여 근무표를 생성하세요.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+
+                    <!-- 하단 버튼 그룹 -->
+                    <footer class="flex justify-stretch mt-6 py-4 bg-background-light dark:bg-background-dark">
+                        <div class="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-end bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                            <button onclick="openDetailedInquiryModal()" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#e2e8f0] hover:bg-[#cbd5e1] text-[#7D8B99] dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-300 text-base font-bold leading-normal tracking-[0.015em]">
+                                <span class="truncate">상세조회</span>
+                            </button>
+                            <button onclick="automaticAssignment()" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-primary hover:bg-primary/90 text-white text-base font-bold leading-normal tracking-[0.015em]">
+                                <span class="truncate">자동배치</span>
+                            </button>
+                        </div>
+                    </footer>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 모달들 -->
+    <!-- 1. 근무자관리 모달 -->
+    <div id="workerManagementModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
+            <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">근무자 관리</h3>
+
+            <div class="space-y-4">
+                <!-- 근무인원수 -->
+                <div>
+                    <label class="block text-sm font-medium mb-2">근무인원수</label>
+                    <div class="flex items-center gap-3">
+                        <button onclick="decreaseWorkerCount()" class="w-10 h-10 rounded-lg bg-gray-200 hover:bg-gray-300 flex items-center justify-center">-</button>
+                        <input type="number" id="workerCount" value="5" min="1" max="10" class="w-20 text-center border-2 border-gray-300 rounded-lg py-2"/>
+                        <button onclick="increaseWorkerCount()" class="w-10 h-10 rounded-lg bg-gray-200 hover:bg-gray-300 flex items-center justify-center">+</button>
+                        <span class="text-sm text-gray-600">(1~10명)</span>
+                    </div>
+                </div>
+
+                <!-- 근무자명 -->
+                <div>
+                    <label class="block text-sm font-medium mb-2">근무자명</label>
+                    <input type="text" id="workerNames" placeholder="김철수,이영희,박민수 (쉼표로 구분)"
+                           class="w-full border-2 border-gray-300 rounded-lg px-4 py-2"/>
+                    <p class="text-xs text-gray-500 mt-1">쉼표(,)로 구분하여 입력하세요</p>
+                </div>
+
+                <!-- 1인당 근무일수 -->
+                <div>
+                    <label class="block text-sm font-medium mb-2">1인당 근무일수</label>
+                    <div class="flex gap-3">
+                        <div class="flex-1">
+                            <label class="block text-xs text-gray-600 mb-1">근무</label>
+                            <input type="number" id="workDaysPerPerson" value="20" min="1" max="31"
+                                   class="w-full border-2 border-gray-300 rounded-lg px-4 py-2"/>
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-xs text-gray-600 mb-1">휴일</label>
+                            <input type="number" id="restDaysPerPerson" value="10" min="0" max="31" readonly
+                                   class="w-full border-2 border-gray-200 rounded-lg px-4 py-2 bg-gray-100"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeWorkerManagementModal()" class="flex-1 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 font-medium">취소</button>
+                <button onclick="saveWorkerManagement()" class="flex-1 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white font-medium">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 날짜 선택 모달 -->
+    <div id="datePickerModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-sm w-full mx-4">
+            <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">날짜를 선택하세요</h3>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">연도</label>
+                    <input type="number" id="selectedYear" value="2025" min="2000" max="2100"
+                           class="w-full border-2 border-gray-300 rounded-lg px-4 py-2"/>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">월</label>
+                    <input type="number" id="selectedMonth" value="11" min="1" max="12"
+                           class="w-full border-2 border-gray-300 rounded-lg px-4 py-2"/>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeDatePickerModal()" class="flex-1 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 font-medium">취소</button>
+                <button onclick="saveDatePicker()" class="flex-1 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white font-medium">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 일별 근무자 지정 모달 -->
+    <div id="dayAssignmentModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
+            <h3 id="dayAssignmentTitle" class="text-xl font-bold mb-4 text-gray-900 dark:text-white">1일의 근무자를 지정하세요</h3>
+
+            <div class="space-y-4">
+                <!-- 주간 근무자 -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-sm font-medium">주간 근무자</label>
+                        <button onclick="addDayWorker()" class="text-primary hover:text-primary/80 text-sm font-medium">+ 추가</button>
+                    </div>
+                    <div id="dayWorkersList" class="space-y-2">
+                        <select class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                            <option value="">선택하세요</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 야간 근무자 -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-sm font-medium">야간 근무자</label>
+                        <button onclick="addNightWorker()" class="text-primary hover:text-primary/80 text-sm font-medium">+ 추가</button>
+                    </div>
+                    <div id="nightWorkersList" class="space-y-2">
+                        <select class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                            <option value="">선택하세요</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeDayAssignmentModal()" class="flex-1 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 font-medium">취소</button>
+                <button onclick="saveDayAssignment()" class="flex-1 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white font-medium">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. 상세조회 메뉴 모달 -->
+    <div id="detailedInquiryModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-sm w-full mx-4">
+            <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">상세조회</h3>
+
+            <div class="space-y-3">
+                <button onclick="openSeparateWorkersModal()" class="w-full py-3 px-4 text-left rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 font-medium">
+                    요분리근무자 설정
+                </button>
+                <button onclick="openScheduleSummaryModal()" class="w-full py-3 px-4 text-left rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 font-medium">
+                    근무배치 현황요약
+                </button>
+            </div>
+
+            <div class="mt-6">
+                <button onclick="closeDetailedInquiryModal()" class="w-full py-2 rounded-lg bg-gray-200 hover:bg-gray-300 font-medium">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. 요분리근무자 모달 -->
+    <div id="separateWorkersModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
+            <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">요분리근무자 설정</h3>
+
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">동일 날짜, 동일 유형 근무를 피해야 하는 근무자를 선택하세요</p>
+
+            <div id="separateWorkersList" class="space-y-2 max-h-80 overflow-y-auto">
+                <!-- JavaScript로 동적 생성 -->
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeSeparateWorkersModal()" class="flex-1 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 font-medium">취소</button>
+                <button onclick="saveSeparateWorkers()" class="flex-1 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white font-medium">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. 근무배치 현황요약 모달 -->
+    <div id="scheduleSummaryModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-bold mb-4 text-gray-900 dark:text-white">근무배치 현황요약</h3>
+
+            <div id="summaryTableContainer" class="overflow-x-auto">
+                <!-- JavaScript로 동적 생성 -->
+            </div>
+
+            <div class="mt-6">
+                <button onclick="closeScheduleSummaryModal()" class="w-full py-2 rounded-lg bg-gray-200 hover:bg-gray-300 font-medium">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 로딩 스피너 -->
+    <div id="loadingSpinner" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-8 text-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-primary mx-auto mb-4"></div>
+            <p class="text-lg font-medium">근무표를 생성하는 중입니다...</p>
+            <p class="text-sm text-gray-600 mt-2">최대 2분 소요될 수 있습니다</p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script_new.js') }}"></script>
+</body>
+</html>
