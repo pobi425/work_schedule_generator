@@ -29,16 +29,17 @@ jobs:
       run: |
         pyinstaller build_exe.spec --clean
 
-    - name: Create Release ZIP
-      run: |
-        Compress-Archive -Path dist\* -DestinationPath WorkScheduleGenerator-Windows.zip
-
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: WorkScheduleGenerator-Windows
-        path: WorkScheduleGenerator-Windows.zip
+        path: dist/
         retention-days: 90
+
+    - name: Create Release ZIP (for tags)
+      if: startsWith(github.ref, 'refs/tags/v')
+      run: |
+        Compress-Archive -Path dist\* -DestinationPath WorkScheduleGenerator-Windows.zip
 
     - name: Create Release (on tag)
       if: startsWith(github.ref, 'refs/tags/v')
