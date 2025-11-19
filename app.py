@@ -151,4 +151,22 @@ def result():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    import webbrowser
+    import threading
+    import time
+
+    def open_browser():
+        """3초 후 브라우저 자동 실행"""
+        time.sleep(3)
+        webbrowser.open('http://127.0.0.1:5000')
+
+    # 백그라운드에서 브라우저 열기
+    threading.Thread(target=open_browser, daemon=True).start()
+
+    print("\n" + "="*50)
+    print("  Work Schedule Generator is running!")
+    print("  URL: http://127.0.0.1:5000")
+    print("  Browser will open automatically...")
+    print("="*50 + "\n")
+
+    app.run(debug=False, host='0.0.0.0', port=5000)
