@@ -1,0 +1,67 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+        architecture: 'x64'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install Flask ortools Werkzeug pyinstaller
+
+    - name: Build EXE with PyInstaller
+      run: |
+        pyinstaller build_exe.spec --clean
+
+    - name: Create Release ZIP
+      run: |
+        Compress-Archive -Path dist\* -DestinationPath WorkScheduleGenerator-Windows.zip
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: WorkScheduleGenerator-Windows
+        path: WorkScheduleGenerator-Windows.zip
+        retention-days: 90
+
+    - name: Create Release (on tag)
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: WorkScheduleGenerator-Windows.zip
+        body: |
+          ## 사회복무요원 근무표 생성기 - Windows EXE
+
+          ### 사용 방법
+          1. `WorkScheduleGenerator-Windows.zip` 다운로드
+          2. 압축 해제
+          3. `WorkScheduleGenerator.exe` 실행
+          4. 브라우저에서 http://127.0.0.1:5000 접속
+
+          ### 시스템 요구사항
+          - Windows 10/11 (64bit)
+          - Python 설치 불필요!
+
+          ### 기능
+          - ✅ OR-Tools CP-SAT 기반 최적화
+          - ✅ Tailwind CSS 4.0 반응형 UI
+          - ✅ 모바일 완벽 지원
+          - ✅ 자동 근무표 생성
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
