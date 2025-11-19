@@ -1,27 +1,17 @@
 @echo off
 chcp 65001 >nul
-title Work Schedule Generator
-
-echo.
-echo ================================================
-echo     Work Schedule Generator for Social Workers
-echo ================================================
-echo.
 
 REM Check Python installation
 python --version >nul 2>&1
 if errorlevel 1 (
     echo ERROR: Python is not installed!
     echo.
-    echo 1. Download Python from: https://www.python.org/downloads/
-    echo 2. During installation, check "Add Python to PATH"!
+    echo Please install Python from: https://www.python.org/downloads/
+    echo Make sure to check "Add Python to PATH" during installation!
     echo.
     pause
     exit /b
 )
-
-echo [OK] Python installation verified
-echo.
 
 REM Create virtual environment if not exists
 if not exist venv (
@@ -32,21 +22,20 @@ if not exist venv (
 REM Activate virtual environment
 call venv\Scripts\activate.bat
 
-REM Check if packages are installed
+REM Install packages if needed
 pip show Flask >nul 2>&1
 if errorlevel 1 (
     echo Installing required packages...
     pip install Flask ortools Werkzeug
-    echo.
 )
 
-echo Starting server...
+REM Start server
 echo.
-echo ===============================================
-echo   Server URL: http://127.0.0.1:5000
-echo ===============================================
+echo ========================================
+echo Server: http://127.0.0.1:5000
+echo ========================================
 echo.
-echo Open this URL in your browser!
+echo Opening browser in 3 seconds...
 echo Press Ctrl+C to stop the server.
 echo.
 
