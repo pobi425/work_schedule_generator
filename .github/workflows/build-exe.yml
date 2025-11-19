@@ -27,7 +27,7 @@ jobs:
 
     - name: Build EXE with PyInstaller
       run: |
-        pyinstaller build_exe.spec --clean
+        pyinstaller --collect-all ortools build_exe.spec --clean
 
     - name: Copy debug batch file
       run: |
