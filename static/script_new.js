@@ -6,9 +6,10 @@ const state = {
     workDaysPerPerson: 20,
     restDaysPerPerson: 10,
     calendarData: null,
-    schedule: {},  // {day: {dayWorkers: [], nightWorkers: []}}
+    schedule: {},  // {day: {dayWorkers: [], nightWorkers: [], offbWorkers: [], offrWorkers: []}}
     separateWorkerPairs: [],  // [[worker1, worker2], ...]
-    selectedDay: null
+    selectedDay: null,
+    lastResult: null  // 백엔드에서 받은 전체 결과 저장
 };
 
 // 페이지 로드 시 초기화
@@ -105,24 +106,54 @@ function createDayCell(day, dayData) {
 
     // 근무자 표시
     const workersContainer = document.createElement('div');
-    workersContainer.className = 'space-y-1';
+    workersContainer.className = 'space-y-1 text-xs';
 
     if (state.schedule[day]) {
-        const { dayWorkers, nightWorkers } = state.schedule[day];
+        const { dayWorkers, nightWorkers, offbWorkers, offrWorkers } = state.schedule[day];
 
-        dayWorkers.forEach(worker => {
-            const badge = document.createElement('div');
-            badge.className = 'worker-badge day-worker';
-            badge.textContent = `주: ${worker}`;
-            workersContainer.appendChild(badge);
-        });
+        // 주간 근무
+        if (dayWorkers && dayWorkers.length > 0) {
+            dayWorkers.forEach(worker => {
+                const badge = document.createElement('div');
+                badge.className = 'worker-badge day-worker';
+                badge.textContent = `주: ${worker}`;
+                workersContainer.appendChild(badge);
+            });
+        }
 
-        nightWorkers.forEach(worker => {
-            const badge = document.createElement('div');
-            badge.className = 'worker-badge night-worker';
-            badge.textContent = `야: ${worker}`;
-            workersContainer.appendChild(badge);
-        });
+        // 야간 근무
+        if (nightWorkers && nightWorkers.length > 0) {
+            nightWorkers.forEach(worker => {
+                const badge = document.createElement('div');
+                badge.className = 'worker-badge night-worker';
+                badge.textContent = `야: ${worker}`;
+                workersContainer.appendChild(badge);
+            });
+        }
+
+        // 비번
+        if (offbWorkers && offbWorkers.length > 0) {
+            offbWorkers.forEach(worker => {
+                const badge = document.createElement('div');
+                badge.className = 'worker-badge offb-worker';
+                badge.style.backgroundColor = '#fbbf24';
+                badge.style.color = '#78350f';
+                badge.textContent = `비: ${worker}`;
+                workersContainer.appendChild(badge);
+            });
+        }
+
+        // 휴무
+        if (offrWorkers && offrWorkers.length > 0) {
+            offrWorkers.forEach(worker => {
+                const badge = document.createElement('div');
+                badge.className = 'worker-badge offr-worker';
+                badge.style.backgroundColor = '#d1d5db';
+                badge.style.color = '#374151';
+                badge.textContent = `휴: ${worker}`;
+                workersContainer.appendChild(badge);
+            });
+        }
     }
 
     cell.appendChild(workersContainer);
@@ -420,45 +451,103 @@ function closeScheduleSummaryModal() {
 function renderScheduleSummary() {
     const container = document.getElementById('summaryTableContainer');
 
-    // 통계 계산
-    const stats = {};
-    state.workers.forEach(worker => {
-        stats[worker] = {
-            day: 0,
-            night: 0,
-            offb: 0,  // 비번 (야간 다음날로 추정)
-            offr: 0,  // 휴일
-            total_work: 0,
-            total_rest: 0,
-            multi: 0  // 2인 이상 근무
-        };
-    });
+    // 백엔드 통계가 있으면 사용, 없으면 프론트엔드 계산
+    let stats;
 
-    // 근무 카운트
-    Object.keys(state.schedule).forEach(day => {
-        const { dayWorkers, nightWorkers } = state.schedule[day];
+    if (state.lastResult && state.lastResult.statistics && state.lastResult.statistics.employee_stats) {
+        // 백엔드 통계 사용 (정확함!)
+        const backendStats = state.lastResult.statistics.employee_stats;
+        stats = {};
 
-        dayWorkers.forEach(worker => {
-            if (stats[worker]) {
-                stats[worker].day++;
-                if (dayWorkers.length >= 2) stats[worker].multi++;
+        backendStats.forEach(empStat => {
+            const totalWork = empStat.day + empStat.night + empStat.offb;
+            const totalRest = empStat.offr;
+
+            stats[empStat.name] = {
+                day: empStat.day,
+                night: empStat.night,
+                offb: empStat.offb,
+                offr: empStat.offr,
+                total_work: totalWork,
+                total_rest: totalRest,
+                multi: 0  // 2인이상은 프론트엔드에서 계산
+            };
+        });
+
+        // 2인 이상 근무 계산
+        Object.keys(state.schedule).forEach(day => {
+            const { dayWorkers, nightWorkers } = state.schedule[day];
+
+            if (dayWorkers && dayWorkers.length >= 2) {
+                dayWorkers.forEach(worker => {
+                    if (stats[worker]) stats[worker].multi++;
+                });
+            }
+
+            if (nightWorkers && nightWorkers.length >= 2) {
+                nightWorkers.forEach(worker => {
+                    if (stats[worker]) stats[worker].multi++;
+                });
             }
         });
 
-        nightWorkers.forEach(worker => {
-            if (stats[worker]) {
-                stats[worker].night++;
-                if (nightWorkers.length >= 2) stats[worker].multi++;
+    } else {
+        // 백엔드 데이터 없을 때만 프론트엔드 계산
+        stats = {};
+        state.workers.forEach(worker => {
+            stats[worker] = {
+                day: 0,
+                night: 0,
+                offb: 0,
+                offr: 0,
+                total_work: 0,
+                total_rest: 0,
+                multi: 0
+            };
+        });
+
+        // 근무 카운트
+        Object.keys(state.schedule).forEach(day => {
+            const { dayWorkers, nightWorkers, offbWorkers, offrWorkers } = state.schedule[day];
+
+            if (dayWorkers) {
+                dayWorkers.forEach(worker => {
+                    if (stats[worker]) {
+                        stats[worker].day++;
+                        if (dayWorkers.length >= 2) stats[worker].multi++;
+                    }
+                });
+            }
+
+            if (nightWorkers) {
+                nightWorkers.forEach(worker => {
+                    if (stats[worker]) {
+                        stats[worker].night++;
+                        if (nightWorkers.length >= 2) stats[worker].multi++;
+                    }
+                });
+            }
+
+            if (offbWorkers) {
+                offbWorkers.forEach(worker => {
+                    if (stats[worker]) stats[worker].offb++;
+                });
+            }
+
+            if (offrWorkers) {
+                offrWorkers.forEach(worker => {
+                    if (stats[worker]) stats[worker].offr++;
+                });
             }
         });
-    });
 
-    // 총계 계산
-    Object.keys(stats).forEach(worker => {
-        const s = stats[worker];
-        s.total_work = s.day + s.night + s.offb;
-        s.total_rest = s.offr;
-    });
+        // 총계 계산
+        Object.keys(stats).forEach(worker => {
+            const s = stats[worker];
+            s.total_work = s.day + s.night + s.offb;
+            s.total_rest = s.offr;
+        });
+    }
 
     // 테이블 생성
     let html = `
@@ -564,10 +653,16 @@ async function automaticAssignment() {
         closeModal('loadingSpinner');
 
         if (data.success) {
+            // 결과 전체를 저장
+            state.lastResult = data.result;
+
             // 결과를 state.schedule에 반영
             applyAutoSchedule(data.result.schedule);
             renderCalendar();
             updateStatusMessage('자동 배치가 완료되었습니다!');
+
+            // 콘솔에 통계 출력 (디버깅용)
+            console.log('백엔드 통계:', data.result.statistics);
         } else {
             alert(data.error);
         }
@@ -586,13 +681,23 @@ function applyAutoSchedule(schedule) {
             const day = shift.day;
 
             if (!state.schedule[day]) {
-                state.schedule[day] = { dayWorkers: [], nightWorkers: [] };
+                state.schedule[day] = {
+                    dayWorkers: [],
+                    nightWorkers: [],
+                    offbWorkers: [],
+                    offrWorkers: []
+                };
             }
 
+            // ShiftType: DAY=0, NIGHT=1, OFF_B=2, OFF_R=3
             if (shift.type === 0) {  // DAY
                 state.schedule[day].dayWorkers.push(emp.name);
             } else if (shift.type === 1) {  // NIGHT
                 state.schedule[day].nightWorkers.push(emp.name);
+            } else if (shift.type === 2) {  // OFF_B (비번)
+                state.schedule[day].offbWorkers.push(emp.name);
+            } else if (shift.type === 3) {  // OFF_R (휴무)
+                state.schedule[day].offrWorkers.push(emp.name);
             }
         });
     });
