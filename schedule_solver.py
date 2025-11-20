@@ -89,6 +89,7 @@ class WorkScheduleSolver:
         self.offb_to_offr_bonuses = []
         self.day_imbalance_vars = []
         self.night_imbalance_vars = []
+        self.night_two_person_bonuses = []  # 야간 2명 달성 보너스
 
     def create_variables(self):
         """의사결정 변수 생성"""
@@ -166,6 +167,11 @@ class WorkScheduleSolver:
                 sum(self.shifts[(i, d, ShiftType.NIGHT)] for i in range(self.config.num_employees)) >= 1
             )
 
+            # 야간 최대 2명 제한 (야간 우선 증원하되 2명까지만)
+            self.model.Add(
+                sum(self.shifts[(i, d, ShiftType.NIGHT)] for i in range(self.config.num_employees)) <= 2
+            )
+
         # 6. 맨 밑 두 명은 같은 날 같은 근무(DAY/NIGHT) 불가
         if self.config.num_employees >= 2:
             last_two = [self.config.num_employees - 2, self.config.num_employees - 1]
@@ -207,6 +213,16 @@ class WorkScheduleSolver:
                 )
                 self.offb_to_offr_bonuses.append(offb_to_offr)
 
+        # 2-1. 야간 2명 달성 선호 (야간 우선 증원)
+        for d in range(self.config.num_days):
+            night_is_two = self.model.NewBoolVar(f'night_is_two_d{d}')
+            night_count_d = sum(self.shifts[(i, d, ShiftType.NIGHT)] for i in range(self.config.num_employees))
+
+            # 야간이 정확히 2명이면 보너스
+            self.model.Add(night_count_d == 2).OnlyEnforceIf(night_is_two)
+            self.model.Add(night_count_d != 2).OnlyEnforceIf(night_is_two.Not())
+            self.night_two_person_bonuses.append(night_is_two)
+
         # 3. DAY, NIGHT 근무 균등 분배
         day_counts = []
         night_counts = []
@@ -241,6 +257,9 @@ class WorkScheduleSolver:
 
         # 2. OFF_B → OFF_R 최대화 (음수로 추가)
         objective_terms.extend([-v * 50 for v in self.offb_to_offr_bonuses])
+
+        # 2-1. 야간 2명 달성 최대화 (야간 우선 증원, 음수로 추가)
+        objective_terms.extend([-v * 30 for v in self.night_two_person_bonuses])
 
         # 3. DAY/NIGHT 균등 분배
         objective_terms.extend([v * 10 for v in self.day_imbalance_vars])
