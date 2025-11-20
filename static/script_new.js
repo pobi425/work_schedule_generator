@@ -9,7 +9,8 @@ const state = {
     schedule: {},  // {day: {dayWorkers: [], nightWorkers: [], offbWorkers: [], offrWorkers: []}}
     separateWorkerPairs: [],  // [[worker1, worker2], ...]
     selectedDay: null,
-    lastResult: null  // 백엔드에서 받은 전체 결과 저장
+    lastResult: null,  // 백엔드에서 받은 전체 결과 저장
+    showOffShifts: true  // 비번/휴무 표시 여부
 };
 
 // 페이지 로드 시 초기화
@@ -131,8 +132,8 @@ function createDayCell(day, dayData) {
             });
         }
 
-        // 비번
-        if (offbWorkers && offbWorkers.length > 0) {
+        // 비번 (showOffShifts가 true일 때만 표시)
+        if (state.showOffShifts && offbWorkers && offbWorkers.length > 0) {
             offbWorkers.forEach(worker => {
                 const badge = document.createElement('div');
                 badge.className = 'worker-badge offb-worker';
@@ -143,8 +144,8 @@ function createDayCell(day, dayData) {
             });
         }
 
-        // 휴무
-        if (offrWorkers && offrWorkers.length > 0) {
+        // 휴무 (showOffShifts가 true일 때만 표시)
+        if (state.showOffShifts && offrWorkers && offrWorkers.length > 0) {
             offrWorkers.forEach(worker => {
                 const badge = document.createElement('div');
                 badge.className = 'worker-badge offr-worker';
@@ -712,4 +713,15 @@ function updateStatusMessage(message) {
     } else {
         statusDiv.style.display = 'block';
     }
+}
+
+function toggleOffShiftsVisibility() {
+    state.showOffShifts = !state.showOffShifts;
+
+    // 버튼 텍스트 업데이트
+    const buttonText = document.getElementById('toggleOffShiftsText');
+    buttonText.textContent = state.showOffShifts ? '비/휴 숨기기' : '비/휴 보기';
+
+    // 달력 다시 렌더링
+    renderCalendar();
 }

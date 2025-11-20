@@ -95,13 +95,21 @@
 
                     <!-- 하단 버튼 그룹 -->
                     <footer class="flex justify-stretch mt-6 py-4 bg-background-light dark:bg-background-dark">
-                        <div class="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-end bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-                            <button onclick="openDetailedInquiryModal()" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#e2e8f0] hover:bg-[#cbd5e1] text-[#7D8B99] dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-300 text-base font-bold leading-normal tracking-[0.015em]">
-                                <span class="truncate">상세조회</span>
+                        <div class="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-between bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                            <!-- 왼쪽: 비/휴 표시 토글 버튼 -->
+                            <button id="toggleOffShiftsBtn" onclick="toggleOffShiftsVisibility()" class="flex items-center justify-center rounded-lg h-12 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <span id="toggleOffShiftsText">비/휴 숨기기</span>
                             </button>
-                            <button onclick="automaticAssignment()" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-primary hover:bg-primary/90 text-white text-base font-bold leading-normal tracking-[0.015em]">
-                                <span class="truncate">자동배치</span>
-                            </button>
+
+                            <!-- 오른쪽: 기존 버튼들 -->
+                            <div class="flex gap-3">
+                                <button onclick="openDetailedInquiryModal()" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#e2e8f0] hover:bg-[#cbd5e1] text-[#7D8B99] dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-300 text-base font-bold leading-normal tracking-[0.015em]">
+                                    <span class="truncate">상세조회</span>
+                                </button>
+                                <button onclick="automaticAssignment()" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-primary hover:bg-primary/90 text-white text-base font-bold leading-normal tracking-[0.015em]">
+                                    <span class="truncate">자동배치</span>
+                                </button>
+                            </div>
                         </div>
                     </footer>
 

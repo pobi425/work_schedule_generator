@@ -223,7 +223,7 @@ class WorkScheduleSolver:
             self.model.Add(night_count_d != 2).OnlyEnforceIf(night_is_two.Not())
             self.night_two_person_bonuses.append(night_is_two)
 
-        # 3. DAY, NIGHT 근무 균등 분배
+        # 3. DAY, NIGHT 근무 균등 분배 (강력한 제약)
         day_counts = []
         night_counts = []
 
@@ -233,20 +233,30 @@ class WorkScheduleSolver:
             day_counts.append(day_count)
             night_counts.append(night_count)
 
-        # 평균과의 차이를 최소화
-        avg_day = self.config.num_days // self.config.num_employees
-        avg_night = self.config.num_days // self.config.num_employees
+        # 최대/최소 근무 횟수 변수
+        max_day_count = self.model.NewIntVar(0, self.config.num_days, 'max_day_count')
+        min_day_count = self.model.NewIntVar(0, self.config.num_days, 'min_day_count')
+        max_night_count = self.model.NewIntVar(0, self.config.num_days, 'max_night_count')
+        min_night_count = self.model.NewIntVar(0, self.config.num_days, 'min_night_count')
 
+        # 모든 직원의 근무 횟수가 최대/최소 범위 내
         for i in range(self.config.num_employees):
-            day_diff_pos = self.model.NewIntVar(0, self.config.num_days, f'day_diff_pos_e{i}')
-            day_diff_neg = self.model.NewIntVar(0, self.config.num_days, f'day_diff_neg_e{i}')
-            self.model.Add(day_counts[i] - avg_day == day_diff_pos - day_diff_neg)
-            self.day_imbalance_vars.extend([day_diff_pos, day_diff_neg])
+            self.model.Add(day_counts[i] <= max_day_count)
+            self.model.Add(day_counts[i] >= min_day_count)
+            self.model.Add(night_counts[i] <= max_night_count)
+            self.model.Add(night_counts[i] >= min_night_count)
 
-            night_diff_pos = self.model.NewIntVar(0, self.config.num_days, f'night_diff_pos_e{i}')
-            night_diff_neg = self.model.NewIntVar(0, self.config.num_days, f'night_diff_neg_e{i}')
-            self.model.Add(night_counts[i] - avg_night == night_diff_pos - night_diff_neg)
-            self.night_imbalance_vars.extend([night_diff_pos, night_diff_neg])
+        # 주간/야간 근무 횟수 차이 최대 2일 이내 (hard constraint)
+        self.model.Add(max_day_count - min_day_count <= 2)
+        self.model.Add(max_night_count - min_night_count <= 2)
+
+        # Soft constraint: 차이를 더욱 최소화
+        day_diff = self.model.NewIntVar(0, self.config.num_days, 'day_diff')
+        night_diff = self.model.NewIntVar(0, self.config.num_days, 'night_diff')
+        self.model.Add(day_diff == max_day_count - min_day_count)
+        self.model.Add(night_diff == max_night_count - min_night_count)
+        self.day_imbalance_vars.append(day_diff)
+        self.night_imbalance_vars.append(night_diff)
 
     def set_objective(self):
         """목표 함수 설정"""
@@ -261,9 +271,9 @@ class WorkScheduleSolver:
         # 2-1. 야간 2명 달성 최대화 (야간 우선 증원, 음수로 추가)
         objective_terms.extend([-v * 30 for v in self.night_two_person_bonuses])
 
-        # 3. DAY/NIGHT 균등 분배
-        objective_terms.extend([v * 10 for v in self.day_imbalance_vars])
-        objective_terms.extend([v * 10 for v in self.night_imbalance_vars])
+        # 3. DAY/NIGHT 균등 분배 (높은 가중치)
+        objective_terms.extend([v * 200 for v in self.day_imbalance_vars])
+        objective_terms.extend([v * 200 for v in self.night_imbalance_vars])
 
         self.model.Minimize(sum(objective_terms))
 
