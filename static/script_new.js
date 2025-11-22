@@ -746,3 +746,106 @@ function toggleOffShiftsVisibility() {
     // 달력 다시 렌더링
     renderCalendar();
 }
+
+// ===== 시간표확인 기능 =====
+
+function openScheduleTableModal() {
+    if (!state.lastResult || !state.lastResult.schedule) {
+        alert('먼저 근무표를 생성해주세요.');
+        return;
+    }
+
+    renderScheduleTable();
+    openModal('scheduleTableModal');
+}
+
+function closeScheduleTableModal() {
+    closeModal('scheduleTableModal');
+}
+
+function renderScheduleTable() {
+    const container = document.getElementById('scheduleTableContainer');
+    const schedule = state.lastResult.schedule;
+    const numDays = state.calendarData ? state.calendarData.num_days : 30;
+
+    // 테이블 생성
+    let html = '<table class="min-w-full border-collapse border-2 border-gray-800" style="font-size: 14px;">';
+
+    // 헤더 행
+    html += '<thead><tr class="bg-gray-200">';
+    html += '<th class="border-2 border-gray-800 px-3 py-2 font-black text-gray-900 sticky left-0 bg-gray-200 z-10">근무자</th>';
+    for (let day = 1; day <= numDays; day++) {
+        html += `<th class="border-2 border-gray-800 px-2 py-2 font-bold text-gray-900 min-w-[40px]">${day}</th>`;
+    }
+    html += '</tr></thead>';
+
+    // 데이터 행
+    html += '<tbody>';
+    schedule.forEach((employee, idx) => {
+        html += '<tr class="' + (idx % 2 === 0 ? 'bg-white' : 'bg-gray-50') + '">';
+        html += `<td class="border-2 border-gray-800 px-3 py-2 font-bold text-gray-900 sticky left-0 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} z-10">${employee.name}</td>`;
+
+        // 각 날짜별 근무 타입
+        for (let day = 1; day <= numDays; day++) {
+            const shift = employee.shifts.find(s => s.day === day);
+            let shiftText = '';
+            let bgColor = '';
+            let textColor = 'text-white';
+
+            if (shift) {
+                // ShiftType: DAY=0, NIGHT=1, OFF_B=2, OFF_R=3
+                if (shift.type === 0) {
+                    shiftText = '주';
+                    bgColor = 'bg-blue-500';
+                } else if (shift.type === 1) {
+                    shiftText = '야';
+                    bgColor = 'bg-purple-600';
+                } else if (shift.type === 2) {
+                    shiftText = '비';
+                    bgColor = 'bg-yellow-400';
+                    textColor = 'text-yellow-900';
+                } else if (shift.type === 3) {
+                    shiftText = '휴';
+                    bgColor = 'bg-gray-300';
+                    textColor = 'text-gray-700';
+                }
+            }
+
+            html += `<td class="border-2 border-gray-800 px-2 py-2 text-center font-bold ${bgColor} ${textColor}">${shiftText}</td>`;
+        }
+
+        html += '</tr>';
+    });
+    html += '</tbody>';
+    html += '</table>';
+
+    container.innerHTML = html;
+}
+
+async function downloadScheduleTable() {
+    const container = document.getElementById('scheduleTableContainer');
+
+    try {
+        // html2canvas로 스크린샷 생성
+        const canvas = await html2canvas(container, {
+            scale: 2, // 고해상도
+            backgroundColor: '#ffffff',
+            logging: false
+        });
+
+        // 이미지로 변환
+        const image = canvas.toDataURL('image/png');
+
+        // 다운로드 링크 생성
+        const link = document.createElement('a');
+        const filename = `근무시간표_${state.currentYear}년${state.currentMonth}월.png`;
+        link.download = filename;
+        link.href = image;
+        link.click();
+
+        alert('시간표가 저장되었습니다!');
+    } catch (error) {
+        console.error('스크린샷 저장 실패:', error);
+        alert('스크린샷 저장에 실패했습니다.');
+    }
+}

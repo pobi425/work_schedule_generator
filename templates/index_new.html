@@ -105,10 +105,15 @@
                     <!-- 하단 버튼 그룹 -->
                     <footer class="flex justify-stretch mt-6 py-4 bg-background-light dark:bg-background-dark">
                         <div class="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-between bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-                            <!-- 왼쪽: 비/휴 표시 토글 버튼 -->
-                            <button id="toggleOffShiftsBtn" onclick="toggleOffShiftsVisibility()" class="flex items-center justify-center rounded-lg h-12 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                <span id="toggleOffShiftsText">비/휴 숨기기</span>
-                            </button>
+                            <!-- 왼쪽: 토글 및 조회 버튼들 -->
+                            <div class="flex gap-3">
+                                <button id="toggleOffShiftsBtn" onclick="toggleOffShiftsVisibility()" class="flex items-center justify-center rounded-lg h-12 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    <span id="toggleOffShiftsText">비/휴 숨기기</span>
+                                </button>
+                                <button onclick="openScheduleTableModal()" class="flex items-center justify-center rounded-lg h-12 px-4 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 text-sm font-medium text-blue-700 dark:text-blue-300">
+                                    <span>시간표확인</span>
+                                </button>
+                            </div>
 
                             <!-- 오른쪽: 기존 버튼들 -->
                             <div class="flex gap-3">
@@ -296,6 +301,26 @@
         </div>
     </div>
 
+    <!-- 시간표확인 모달 -->
+    <div id="scheduleTableModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-[95vw] w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white">개인별 시간표</h3>
+                <button onclick="downloadScheduleTable()" class="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium text-sm">
+                    스크린샷 저장
+                </button>
+            </div>
+
+            <div id="scheduleTableContainer" class="overflow-x-auto bg-white p-4 rounded-lg">
+                <!-- JavaScript로 동적 생성 -->
+            </div>
+
+            <div class="mt-6">
+                <button onclick="closeScheduleTableModal()" class="w-full py-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 font-medium">닫기</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 로딩 스피너 -->
     <div id="loadingSpinner" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
         <div class="bg-white rounded-xl p-8 text-center">
@@ -305,6 +330,8 @@
         </div>
     </div>
 
+    <!-- html2canvas 라이브러리 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="{{ url_for('static', filename='script_new.js') }}"></script>
 </body>
 </html>
