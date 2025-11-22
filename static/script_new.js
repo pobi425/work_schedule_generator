@@ -645,6 +645,13 @@ async function automaticAssignment() {
         return;
     }
 
+    // 1일 비번 근무자 체크
+    const day1Schedule = state.schedule[1];
+    if (!day1Schedule || !day1Schedule.offbWorkers || day1Schedule.offbWorkers.length === 0) {
+        alert('주의! 1일 비번근무자를 선택하지 않았습니다!');
+        return;
+    }
+
     // 로딩 표시
     openModal('loadingSpinner');
 
