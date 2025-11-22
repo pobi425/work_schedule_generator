@@ -10,7 +10,8 @@ const state = {
     separateWorkerPairs: [],  // [[worker1, worker2], ...]
     selectedDay: null,
     lastResult: null,  // 백엔드에서 받은 전체 결과 저장
-    showOffShifts: true  // 비번/휴무 표시 여부
+    showOffShifts: true,  // 비번/휴무 표시 여부
+    currentSaveKey: null  // 현재 저장된 키 (덮어쓰기용)
 };
 
 // 페이지 로드 시 초기화
@@ -303,10 +304,12 @@ function openDayAssignmentModal(day) {
     document.getElementById('dayAssignmentTitle').textContent = `${day}일의 근무자를 지정하세요`;
 
     // 기존 선택 로드
-    const daySchedule = state.schedule[day] || { dayWorkers: [], nightWorkers: [] };
+    const daySchedule = state.schedule[day] || { dayWorkers: [], nightWorkers: [], offbWorkers: [], offrWorkers: [] };
 
     renderWorkerSelects('dayWorkersList', daySchedule.dayWorkers);
     renderWorkerSelects('nightWorkersList', daySchedule.nightWorkers);
+    renderWorkerSelects('offbWorkersList', daySchedule.offbWorkers);
+    renderWorkerSelects('offrWorkersList', daySchedule.offrWorkers);
 
     openModal('dayAssignmentModal');
 }
@@ -349,14 +352,28 @@ function createWorkerSelect(selectedWorker) {
 
 function addDayWorker() {
     const container = document.getElementById('dayWorkersList');
-    if (container.children.length < 3) {
+    if (container.children.length < 5) {
         container.appendChild(createWorkerSelect(''));
     }
 }
 
 function addNightWorker() {
     const container = document.getElementById('nightWorkersList');
-    if (container.children.length < 3) {
+    if (container.children.length < 5) {
+        container.appendChild(createWorkerSelect(''));
+    }
+}
+
+function addOffBWorker() {
+    const container = document.getElementById('offbWorkersList');
+    if (container.children.length < 5) {
+        container.appendChild(createWorkerSelect(''));
+    }
+}
+
+function addOffRWorker() {
+    const container = document.getElementById('offrWorkersList');
+    if (container.children.length < 5) {
         container.appendChild(createWorkerSelect(''));
     }
 }
@@ -366,8 +383,10 @@ function saveDayAssignment() {
 
     const dayWorkers = getSelectedWorkers('dayWorkersList');
     const nightWorkers = getSelectedWorkers('nightWorkersList');
+    const offbWorkers = getSelectedWorkers('offbWorkersList');
+    const offrWorkers = getSelectedWorkers('offrWorkersList');
 
-    state.schedule[day] = { dayWorkers, nightWorkers };
+    state.schedule[day] = { dayWorkers, nightWorkers, offbWorkers, offrWorkers };
 
     renderCalendar();
     closeDayAssignmentModal();
@@ -848,4 +867,314 @@ async function downloadScheduleTable() {
         console.error('스크린샷 저장 실패:', error);
         alert('스크린샷 저장에 실패했습니다.');
     }
+}
+
+// ===== 저장/불러오기 기능 =====
+
+function checkAndSave() {
+    if (!state.lastResult || !state.lastResult.schedule) {
+        alert('저장할 근무표가 없습니다. 먼저 근무표를 생성해주세요.');
+        return;
+    }
+
+    // 이미 저장된 적이 있으면 저장 옵션 모달 표시
+    if (state.currentSaveKey) {
+        openSaveOptionsModal();
+    } else {
+        // 처음 저장하는 경우 바로 다른 이름으로 저장
+        saveSchedule(true);
+    }
+}
+
+function openSaveOptionsModal() {
+    openModal('saveOptionsModal');
+}
+
+function closeSaveOptionsModal() {
+    closeModal('saveOptionsModal');
+}
+
+function saveSchedule(saveAs) {
+    let saveKey = state.currentSaveKey;
+
+    if (saveAs || !saveKey) {
+        // 다른 이름으로 저장
+        const saveName = prompt('저장 이름을 입력하세요:', `${state.currentYear}년${state.currentMonth}월_근무표`);
+        if (!saveName) {
+            closeSaveOptionsModal();
+            return;
+        }
+        saveKey = `schedule_${saveName}`;
+    }
+
+    // 저장할 데이터
+    const saveData = {
+        year: state.currentYear,
+        month: state.currentMonth,
+        workers: state.workers,
+        workDaysPerPerson: state.workDaysPerPerson,
+        restDaysPerPerson: state.restDaysPerPerson,
+        schedule: state.schedule,
+        separateWorkerPairs: state.separateWorkerPairs,
+        lastResult: state.lastResult,
+        savedAt: new Date().toISOString()
+    };
+
+    try {
+        localStorage.setItem(saveKey, JSON.stringify(saveData));
+        state.currentSaveKey = saveKey;
+
+        // 저장 목록 업데이트 (최근 저장 추적)
+        updateSaveList(saveKey);
+
+        alert('근무표가 저장되었습니다!');
+        closeSaveOptionsModal();
+
+        // 시간표 이미지도 자동 저장
+        saveScheduleImage(saveKey);
+    } catch (error) {
+        console.error('저장 실패:', error);
+        alert('저장에 실패했습니다. 저장 공간을 확인해주세요.');
+    }
+}
+
+function updateSaveList(saveKey) {
+    let saveList = JSON.parse(localStorage.getItem('scheduleList') || '[]');
+    if (!saveList.includes(saveKey)) {
+        saveList.unshift(saveKey);
+    }
+    localStorage.setItem('scheduleList', JSON.stringify(saveList));
+}
+
+async function saveScheduleImage(saveKey) {
+    // 시간표 이미지도 함께 저장
+    if (!state.lastResult || !state.lastResult.schedule) return;
+
+    try {
+        // 임시로 시간표 렌더링
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.left = '-9999px';
+        tempContainer.innerHTML = renderScheduleTableHTML();
+        document.body.appendChild(tempContainer);
+
+        const canvas = await html2canvas(tempContainer, {
+            scale: 2,
+            backgroundColor: '#ffffff',
+            logging: false
+        });
+
+        const imageData = canvas.toDataURL('image/png');
+        localStorage.setItem(`${saveKey}_image`, imageData);
+
+        document.body.removeChild(tempContainer);
+    } catch (error) {
+        console.error('이미지 저장 실패:', error);
+    }
+}
+
+function renderScheduleTableHTML() {
+    const schedule = state.lastResult.schedule;
+    const numDays = state.calendarData ? state.calendarData.num_days : 30;
+
+    let html = '<div style="background: white; padding: 20px;">';
+    html += '<table class="min-w-full border-collapse border-2 border-gray-800" style="font-size: 14px;">';
+    html += '<thead><tr class="bg-gray-200">';
+    html += '<th class="border-2 border-gray-800 px-3 py-2 font-black text-gray-900">근무자</th>';
+    for (let day = 1; day <= numDays; day++) {
+        html += `<th class="border-2 border-gray-800 px-2 py-2 font-bold text-gray-900">${day}</th>`;
+    }
+    html += '</tr></thead><tbody>';
+
+    schedule.forEach((employee, idx) => {
+        html += `<tr class="${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">`;
+        html += `<td class="border-2 border-gray-800 px-3 py-2 font-bold text-gray-900">${employee.name}</td>`;
+
+        for (let day = 1; day <= numDays; day++) {
+            const shift = employee.shifts.find(s => s.day === day);
+            let shiftText = '';
+            let bgColor = '';
+
+            if (shift) {
+                if (shift.type === 0) { shiftText = '주'; bgColor = 'background: #3b82f6; color: white;'; }
+                else if (shift.type === 1) { shiftText = '야'; bgColor = 'background: #8b5cf6; color: white;'; }
+                else if (shift.type === 2) { shiftText = '비'; bgColor = 'background: #fbbf24; color: #78350f;'; }
+                else if (shift.type === 3) { shiftText = '휴'; bgColor = 'background: #d1d5db; color: #374151;'; }
+            }
+
+            html += `<td class="border-2 border-gray-800 px-2 py-2 text-center font-bold" style="${bgColor}">${shiftText}</td>`;
+        }
+        html += '</tr>';
+    });
+
+    html += '</tbody></table></div>';
+    return html;
+}
+
+function openLoadModal() {
+    renderSavedSchedulesList();
+    openModal('loadModal');
+}
+
+function closeLoadModal() {
+    closeModal('loadModal');
+}
+
+function renderSavedSchedulesList() {
+    const container = document.getElementById('savedSchedulesList');
+    const saveList = JSON.parse(localStorage.getItem('scheduleList') || '[]');
+
+    if (saveList.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-center py-4">저장된 근무표가 없습니다.</p>';
+        return;
+    }
+
+    let html = '';
+    saveList.forEach(saveKey => {
+        const data = JSON.parse(localStorage.getItem(saveKey) || 'null');
+        if (!data) return;
+
+        const saveName = saveKey.replace('schedule_', '');
+        const savedDate = new Date(data.savedAt).toLocaleString('ko-KR');
+
+        html += `
+            <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700">
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <h4 class="font-bold text-gray-900 dark:text-white">${saveName}</h4>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">${data.year}년 ${data.month}월 | ${data.workers.length}명</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-500">저장: ${savedDate}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="loadSchedule('${saveKey}')" class="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm">
+                            불러오기
+                        </button>
+                        <button onclick="deleteSchedule('${saveKey}')" class="px-3 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-sm">
+                            삭제
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+function loadSchedule(saveKey) {
+    try {
+        const data = JSON.parse(localStorage.getItem(saveKey));
+        if (!data) {
+            alert('저장된 데이터를 찾을 수 없습니다.');
+            return;
+        }
+
+        // 상태 복원
+        state.currentYear = data.year;
+        state.currentMonth = data.month;
+        state.workers = data.workers;
+        state.workDaysPerPerson = data.workDaysPerPerson;
+        state.restDaysPerPerson = data.restDaysPerPerson;
+        state.schedule = data.schedule;
+        state.separateWorkerPairs = data.separateWorkerPairs || [];
+        state.lastResult = data.lastResult;
+        state.currentSaveKey = saveKey;
+
+        // 이전달 데이터 연동 확인
+        checkAndLinkPreviousMonth();
+
+        // UI 업데이트
+        loadCalendarInfo(state.currentYear, state.currentMonth);
+        updateWorkerCountDisplay();
+        renderCalendar();
+
+        closeLoadModal();
+        alert('근무표를 불러왔습니다!');
+    } catch (error) {
+        console.error('불러오기 실패:', error);
+        alert('불러오기에 실패했습니다.');
+    }
+}
+
+function deleteSchedule(saveKey) {
+    if (!confirm('정말 삭제하시겠습니까?')) return;
+
+    try {
+        localStorage.removeItem(saveKey);
+        localStorage.removeItem(`${saveKey}_image`);
+
+        // 목록에서 제거
+        let saveList = JSON.parse(localStorage.getItem('scheduleList') || '[]');
+        saveList = saveList.filter(key => key !== saveKey);
+        localStorage.setItem('scheduleList', JSON.stringify(saveList));
+
+        renderSavedSchedulesList();
+        alert('삭제되었습니다.');
+    } catch (error) {
+        console.error('삭제 실패:', error);
+        alert('삭제에 실패했습니다.');
+    }
+}
+
+function checkAndLinkPreviousMonth() {
+    // 이전달 데이터 찾기
+    let prevYear = state.currentYear;
+    let prevMonth = state.currentMonth - 1;
+    if (prevMonth < 1) {
+        prevMonth = 12;
+        prevYear--;
+    }
+
+    // 저장된 목록에서 이전달 데이터 찾기
+    const saveList = JSON.parse(localStorage.getItem('scheduleList') || '[]');
+    let prevMonthData = null;
+
+    for (const saveKey of saveList) {
+        const data = JSON.parse(localStorage.getItem(saveKey) || 'null');
+        if (data && data.year === prevYear && data.month === prevMonth) {
+            prevMonthData = data;
+            break;
+        }
+    }
+
+    if (!prevMonthData) {
+        console.log('이전달 데이터가 없습니다.');
+        return;
+    }
+
+    // 이전달 말일 야간근무자 찾기
+    const prevMonthSchedule = prevMonthData.lastResult?.schedule;
+    if (!prevMonthSchedule) return;
+
+    const lastDay = prevMonthData.calendarData?.num_days || 30;
+    const nightWorkersLastDay = [];
+
+    prevMonthSchedule.forEach(employee => {
+        const lastDayShift = employee.shifts.find(s => s.day === lastDay);
+        if (lastDayShift && lastDayShift.type === 1) { // NIGHT
+            nightWorkersLastDay.push(employee.name);
+        }
+    });
+
+    if (nightWorkersLastDay.length === 0) {
+        console.log('이전달 말일에 야간근무자가 없습니다.');
+        return;
+    }
+
+    // 현재달 1일에 비번 추가 (수동으로만, 자동배치는 제약 유지)
+    console.log(`이전달 말일 야간근무자: ${nightWorkersLastDay.join(', ')}`);
+    console.log('이번달 1일에 비번으로 추가됩니다 (수동 입력 권장).');
+
+    // 자동으로 1일 스케줄에 추가
+    if (!state.schedule[1]) {
+        state.schedule[1] = { dayWorkers: [], nightWorkers: [], offbWorkers: [], offrWorkers: [] };
+    }
+
+    nightWorkersLastDay.forEach(worker => {
+        if (!state.schedule[1].offbWorkers.includes(worker)) {
+            state.schedule[1].offbWorkers.push(worker);
+        }
+    });
+
+    alert(`이전달(${prevYear}년 ${prevMonth}월) 말일 야간근무자 ${nightWorkersLastDay.length}명을 1일 비번으로 추가했습니다.`);
 }
