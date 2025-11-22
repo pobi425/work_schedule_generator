@@ -89,9 +89,7 @@ class WorkScheduleSolver:
         self.offb_to_offr_bonuses = []
         self.day_imbalance_vars = []
         self.night_imbalance_vars = []
-        self.pattern_1_1_bonuses = []  # 주1야1 패턴
-        self.pattern_1_2_bonuses = []  # 주1야2 패턴 (최우선)
-        self.pattern_2_2_bonuses = []  # 주2야2 패턴
+        self.night_priority_vars = []  # 야간 >= 주간 강제
 
     def create_variables(self):
         """의사결정 변수 생성"""
@@ -160,18 +158,17 @@ class WorkScheduleSolver:
                 # 7일 중 최소 1일은 OFF_R이어야 함
                 self.model.Add(work_in_7days <= 6)
 
-        # 5. 모든 날짜에 인원 제한 (주1야1 기본, 주간 최대 3명, 야간 최대 2명)
+        # 5. 모든 날짜에 최소 인원 (야간 우선 증원, 최대 제한 없음)
         for d in range(self.config.num_days):
             day_count = sum(self.shifts[(i, d, ShiftType.DAY)] for i in range(self.config.num_employees))
             night_count = sum(self.shifts[(i, d, ShiftType.NIGHT)] for i in range(self.config.num_employees))
 
-            # 주간: 최소 1명, 최대 3명
+            # 최소: 주간 1명, 야간 1명
             self.model.Add(day_count >= 1)
-            self.model.Add(day_count <= 3)
-
-            # 야간: 최소 1명, 최대 2명
             self.model.Add(night_count >= 1)
-            self.model.Add(night_count <= 2)
+
+            # 야간 우선 증원: 야간 >= 주간 (soft constraint는 아래에서)
+            # 최대 제한은 없음 (인원이 8명뿐이라 자연스럽게 제한됨)
 
         # 7. 고정 근무 (지정 날짜 근무)
         for fixed_shift in self.config.fixed_shifts:
@@ -205,31 +202,19 @@ class WorkScheduleSolver:
                 )
                 self.offb_to_offr_bonuses.append(offb_to_offr)
 
-        # 2-1. 날짜별 배치 패턴 선호 (주1야1 → 주1야2 → 주2야2 순서)
+        # 2-1. 야간 우선 증원 (야간 >= 주간 강제)
         for d in range(self.config.num_days):
             day_count_d = sum(self.shifts[(i, d, ShiftType.DAY)] for i in range(self.config.num_employees))
             night_count_d = sum(self.shifts[(i, d, ShiftType.NIGHT)] for i in range(self.config.num_employees))
 
-            # 주1야1 패턴 (기본, 낮은 우선순위)
-            pattern_1_1 = self.model.NewBoolVar(f'pattern_1_1_d{d}')
-            self.model.Add(day_count_d == 1).OnlyEnforceIf(pattern_1_1)
-            self.model.Add(night_count_d == 1).OnlyEnforceIf(pattern_1_1)
-            self.model.Add((day_count_d != 1) | (night_count_d != 1)).OnlyEnforceIf(pattern_1_1.Not())
-            self.pattern_1_1_bonuses.append(pattern_1_1)
+            # 야간 - 주간 차이 (양수면 야간이 더 많음, 음수면 주간이 더 많음)
+            night_advantage = self.model.NewIntVar(-self.config.num_employees, self.config.num_employees, f'night_adv_d{d}')
+            self.model.Add(night_advantage == night_count_d - day_count_d)
 
-            # 주1야2 패턴 (최우선)
-            pattern_1_2 = self.model.NewBoolVar(f'pattern_1_2_d{d}')
-            self.model.Add(day_count_d == 1).OnlyEnforceIf(pattern_1_2)
-            self.model.Add(night_count_d == 2).OnlyEnforceIf(pattern_1_2)
-            self.model.Add((day_count_d != 1) | (night_count_d != 2)).OnlyEnforceIf(pattern_1_2.Not())
-            self.pattern_1_2_bonuses.append(pattern_1_2)
-
-            # 주2야2 패턴 (중간 우선순위)
-            pattern_2_2 = self.model.NewBoolVar(f'pattern_2_2_d{d}')
-            self.model.Add(day_count_d == 2).OnlyEnforceIf(pattern_2_2)
-            self.model.Add(night_count_d == 2).OnlyEnforceIf(pattern_2_2)
-            self.model.Add((day_count_d != 2) | (night_count_d != 2)).OnlyEnforceIf(pattern_2_2.Not())
-            self.pattern_2_2_bonuses.append(pattern_2_2)
+            # 야간이 주간보다 적으면 페널티 (야간 >= 주간 선호)
+            night_deficit = self.model.NewIntVar(0, self.config.num_employees, f'night_deficit_d{d}')
+            self.model.AddMaxEquality(night_deficit, [0, -night_advantage])  # max(0, -(night-day))
+            self.night_priority_vars.append(night_deficit)
 
         # 3. DAY, NIGHT 근무 균등 분배 (강력한 제약)
         day_counts = []
@@ -276,10 +261,8 @@ class WorkScheduleSolver:
         # 2. OFF_B → OFF_R 최대화 (음수로 추가)
         objective_terms.extend([-v * 50 for v in self.offb_to_offr_bonuses])
 
-        # 2-1. 날짜별 배치 패턴 우선순위 (주1야2 최우선)
-        objective_terms.extend([-v * 100 for v in self.pattern_1_2_bonuses])  # 주1야2: 최고 우선순위
-        objective_terms.extend([-v * 30 for v in self.pattern_2_2_bonuses])   # 주2야2: 중간 우선순위
-        objective_terms.extend([-v * 10 for v in self.pattern_1_1_bonuses])   # 주1야1: 낮은 우선순위
+        # 2-1. 야간 우선 증원 (야간 >= 주간 강제, 매우 높은 가중치)
+        objective_terms.extend([v * 500 for v in self.night_priority_vars])
 
         # 3. DAY/NIGHT 균등 분배 (높은 가중치)
         objective_terms.extend([v * 200 for v in self.day_imbalance_vars])
