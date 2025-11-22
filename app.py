@@ -53,14 +53,16 @@ def calendar_info():
         # 해당 월의 일수
         num_days = calendar.monthrange(year, month)[1]
 
-        # 1일의 요일
-        first_day_weekday = calendar.monthrange(year, month)[0]
-        first_day_name = calendar.day_name[first_day_weekday]
+        # 1일의 요일 (일요일 기준으로 변환)
+        first_day_weekday_raw = calendar.monthrange(year, month)[0]  # 월(0), 화(1), ..., 일(6)
+        first_day_weekday = (first_day_weekday_raw + 1) % 7  # 일(0), 월(1), ..., 토(6)
+        first_day_name = calendar.day_name[first_day_weekday_raw]
 
-        # 말일의 요일
+        # 말일의 요일 (일요일 기준으로 변환)
         last_day = datetime(year, month, num_days)
-        last_day_weekday = last_day.weekday()
-        last_day_name = calendar.day_name[last_day_weekday]
+        last_day_weekday_raw = last_day.weekday()  # 월(0), 화(1), ..., 일(6)
+        last_day_weekday = (last_day_weekday_raw + 1) % 7  # 일(0), 월(1), ..., 토(6)
+        last_day_name = calendar.day_name[last_day_weekday_raw]
 
         # 달력 생성 (날짜별 요일 및 공휴일)
         days = []
@@ -69,8 +71,10 @@ def calendar_info():
 
         for day in range(1, num_days + 1):
             date = datetime(year, month, day)
-            weekday = date.weekday()
-            is_weekend = weekday in [5, 6]
+            weekday = date.weekday()  # 월(0), 화(1), ..., 토(5), 일(6)
+            # 일요일 기준으로 변환: 일(0), 월(1), 화(2), ..., 토(6)
+            adjusted_weekday = (weekday + 1) % 7
+            is_weekend = adjusted_weekday in [0, 6]  # 일요일(0), 토요일(6)
 
             # 공휴일 체크 (연도별로 확장 가능)
             is_holiday = False
@@ -86,7 +90,7 @@ def calendar_info():
 
             days.append({
                 'day': day,
-                'weekday': weekday,
+                'weekday': adjusted_weekday,  # 일요일 기준 (0-6)
                 'weekday_name': calendar.day_abbr[weekday],
                 'is_weekend': is_weekend,
                 'is_holiday': is_holiday,

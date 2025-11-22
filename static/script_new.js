@@ -112,13 +112,14 @@ function createDayCell(day, dayData) {
     dateNumber.className = 'text-right mb-2';
 
     const dateSpan = document.createElement('span');
-    // 토요일(5) → 파랑, 일요일(6)/공휴일 → 빨강, 평일 → 검정/노랑
-    if (dayData.weekday === 5) {  // 토요일
+    // 일요일 기준: 일(0), 월(1), 화(2), 수(3), 목(4), 금(5), 토(6)
+    // 토요일(6) → 파랑, 일요일(0)/공휴일 → 빨강, 평일 → 검정
+    if (dayData.weekday === 6) {  // 토요일
         dateSpan.className = 'text-blue-600 font-bold';
-    } else if (dayData.weekday === 6 || dayData.is_holiday) {  // 일요일 또는 공휴일
+    } else if (dayData.weekday === 0 || dayData.is_holiday) {  // 일요일 또는 공휴일
         dateSpan.className = 'text-red-600 font-bold';
     } else {  // 평일
-        dateSpan.className = 'text-yellow-500 dark:text-yellow-400 font-bold';
+        dateSpan.className = 'text-gray-900 font-bold';
     }
     dateSpan.textContent = day;
     dateNumber.appendChild(dateSpan);
