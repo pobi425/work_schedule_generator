@@ -25,6 +25,16 @@
                 -1px 0 0 #fbbf24,
                 1px 0 0 #fbbf24;
         }
+        /* 모든 버튼에 굵은 테두리와 그림자 */
+        button {
+            border: 3px solid #000 !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+            font-weight: bold !important;
+        }
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.4) !important;
+        }
         .modal { display: none; }
         .modal.active { display: flex; }
         .calendar-cell {
