@@ -205,15 +205,42 @@ class WorkScheduleSolver:
                 )
                 self.offb_to_offr_bonuses.append(offb_to_offr)
 
-        # 2-1. 날짜별 총 인원 수 최소화 및 균등화
+        # 2-1. 타임별 인원 균등화 (최고 우선순위!)
+        daily_day_counts = []
+        daily_night_counts = []
+
         for d in range(self.config.num_days):
             day_count_d = sum(self.shifts[(i, d, ShiftType.DAY)] for i in range(self.config.num_employees))
             night_count_d = sum(self.shifts[(i, d, ShiftType.NIGHT)] for i in range(self.config.num_employees))
+            daily_day_counts.append(day_count_d)
+            daily_night_counts.append(night_count_d)
 
-            # 날짜별 총 인원 수 (주간 + 야간)
-            total_workers_d = self.model.NewIntVar(2, self.config.num_employees, f'total_workers_d{d}')
-            self.model.Add(total_workers_d == day_count_d + night_count_d)
-            self.daily_total_workers.append(total_workers_d)
+        # 모든 날의 주간 인원 수 균등 (hard constraint)
+        max_day_per_date = self.model.NewIntVar(1, self.config.num_employees, 'max_day_per_date')
+        min_day_per_date = self.model.NewIntVar(1, self.config.num_employees, 'min_day_per_date')
+
+        for day_count in daily_day_counts:
+            self.model.Add(day_count <= max_day_per_date)
+            self.model.Add(day_count >= min_day_per_date)
+
+        # 모든 날의 야간 인원 수 균등 (hard constraint)
+        max_night_per_date = self.model.NewIntVar(1, self.config.num_employees, 'max_night_per_date')
+        min_night_per_date = self.model.NewIntVar(1, self.config.num_employees, 'min_night_per_date')
+
+        for night_count in daily_night_counts:
+            self.model.Add(night_count <= max_night_per_date)
+            self.model.Add(night_count >= min_night_per_date)
+
+        # 주간/야간 타임별 인원 차이 최대 1명 (hard constraint)
+        self.model.Add(max_day_per_date - min_day_per_date <= 1)
+        self.model.Add(max_night_per_date - min_night_per_date <= 1)
+
+        # Soft: 완전 동일하게 (차이 0) 선호
+        day_per_date_diff = self.model.NewIntVar(0, self.config.num_employees, 'day_per_date_diff')
+        night_per_date_diff = self.model.NewIntVar(0, self.config.num_employees, 'night_per_date_diff')
+        self.model.Add(day_per_date_diff == max_day_per_date - min_day_per_date)
+        self.model.Add(night_per_date_diff == max_night_per_date - min_night_per_date)
+        self.daily_total_workers.extend([day_per_date_diff, night_per_date_diff])
 
         # 3. DAY, NIGHT 근무 균등 분배 (강력한 제약)
         day_counts = []
