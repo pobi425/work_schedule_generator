@@ -89,6 +89,7 @@ class WorkScheduleSolver:
         self.offb_to_offr_bonuses = []
         self.day_imbalance_vars = []
         self.night_imbalance_vars = []
+        self.daily_total_workers = []  # 날짜별 총 인원 수 (최소화 목표)
 
     def create_variables(self):
         """의사결정 변수 생성"""
@@ -204,6 +205,16 @@ class WorkScheduleSolver:
                 )
                 self.offb_to_offr_bonuses.append(offb_to_offr)
 
+        # 2-1. 날짜별 총 인원 수 최소화 및 균등화
+        for d in range(self.config.num_days):
+            day_count_d = sum(self.shifts[(i, d, ShiftType.DAY)] for i in range(self.config.num_employees))
+            night_count_d = sum(self.shifts[(i, d, ShiftType.NIGHT)] for i in range(self.config.num_employees))
+
+            # 날짜별 총 인원 수 (주간 + 야간)
+            total_workers_d = self.model.NewIntVar(2, self.config.num_employees, f'total_workers_d{d}')
+            self.model.Add(total_workers_d == day_count_d + night_count_d)
+            self.daily_total_workers.append(total_workers_d)
+
         # 3. DAY, NIGHT 근무 균등 분배 (강력한 제약)
         day_counts = []
         night_counts = []
@@ -248,6 +259,10 @@ class WorkScheduleSolver:
 
         # 2. OFF_B → OFF_R 최대화 (음수로 추가)
         objective_terms.extend([-v * 50 for v in self.offb_to_offr_bonuses])
+
+        # 2-1. 날짜별 총 인원 수 최소화 (매우 높은 가중치)
+        # 이렇게 하면 모든 날이 주1야2 (3명) 같은 최소 패턴으로 균등해짐
+        objective_terms.extend([v * 1000 for v in self.daily_total_workers])
 
         # 3. DAY/NIGHT 균등 분배 (높은 가중치)
         objective_terms.extend([v * 200 for v in self.day_imbalance_vars])
