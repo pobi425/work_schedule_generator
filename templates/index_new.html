@@ -9,23 +9,32 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #8C92AC !important; /* Moonstone gray */
+        }
         .modal { display: none; }
         .modal.active { display: flex; }
-        .calendar-cell { min-height: 100px; cursor: pointer; transition: all 0.2s; }
-        .calendar-cell:hover { background-color: #f0f9ff; }
+        .calendar-cell {
+            min-height: 100px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-width: 2px !important; /* Bolder borders */
+        }
+        .calendar-cell:hover { background-color: #e0e7ff; }
         .worker-badge {
             font-size: 0.75rem;
             padding: 2px 6px;
             border-radius: 4px;
             margin: 2px;
             display: inline-block;
+            font-weight: 700; /* Bolder */
         }
         .day-worker { background-color: #3b82f6; color: white; }
         .night-worker { background-color: #8b5cf6; color: white; }
     </style>
 </head>
-<body class="bg-background-light dark:bg-background-dark">
+<body class="bg-[#8C92AC]">
     <div class="relative flex min-h-screen w-full flex-col font-display">
         <div class="layout-container flex h-full grow flex-col">
             <div class="flex flex-1 justify-center p-4 sm:p-6 md:p-8">
@@ -68,15 +77,15 @@
                             </div>
 
                             <!-- 달력 그리드 -->
-                            <div id="calendarGrid" class="grid grid-cols-7 border-t border-l border-[#dbdfe6] dark:border-gray-700">
+                            <div id="calendarGrid" class="grid grid-cols-7 border-t-2 border-l-2 border-gray-800">
                                 <!-- 요일 헤더 -->
-                                <p class="text-[#7D8B99] dark:text-gray-400 text-sm font-bold flex h-12 w-full items-center justify-center border-b border-r border-[#dbdfe6] dark:border-gray-700 bg-background-light dark:bg-gray-900">일</p>
-                                <p class="text-[#7D8B99] dark:text-gray-400 text-sm font-bold flex h-12 w-full items-center justify-center border-b border-r border-[#dbdfe6] dark:border-gray-700 bg-background-light dark:bg-gray-900">월</p>
-                                <p class="text-[#7D8B99] dark:text-gray-400 text-sm font-bold flex h-12 w-full items-center justify-center border-b border-r border-[#dbdfe6] dark:border-gray-700 bg-background-light dark:bg-gray-900">화</p>
-                                <p class="text-[#7D8B99] dark:text-gray-400 text-sm font-bold flex h-12 w-full items-center justify-center border-b border-r border-[#dbdfe6] dark:border-gray-700 bg-background-light dark:bg-gray-900">수</p>
-                                <p class="text-[#7D8B99] dark:text-gray-400 text-sm font-bold flex h-12 w-full items-center justify-center border-b border-r border-[#dbdfe6] dark:border-gray-700 bg-background-light dark:bg-gray-900">목</p>
-                                <p class="text-[#7D8B99] dark:text-gray-400 text-sm font-bold flex h-12 w-full items-center justify-center border-b border-r border-[#dbdfe6] dark:border-gray-700 bg-background-light dark:bg-gray-900">금</p>
-                                <p class="text-[#7D8B99] dark:text-gray-400 text-sm font-bold flex h-12 w-full items-center justify-center border-b border-r border-[#dbdfe6] dark:border-gray-700 bg-background-light dark:bg-gray-900">토</p>
+                                <p class="text-red-600 text-sm font-black flex h-12 w-full items-center justify-center border-b-2 border-r-2 border-gray-800 bg-gray-200">일</p>
+                                <p class="text-gray-900 text-sm font-black flex h-12 w-full items-center justify-center border-b-2 border-r-2 border-gray-800 bg-gray-200">월</p>
+                                <p class="text-gray-900 text-sm font-black flex h-12 w-full items-center justify-center border-b-2 border-r-2 border-gray-800 bg-gray-200">화</p>
+                                <p class="text-gray-900 text-sm font-black flex h-12 w-full items-center justify-center border-b-2 border-r-2 border-gray-800 bg-gray-200">수</p>
+                                <p class="text-gray-900 text-sm font-black flex h-12 w-full items-center justify-center border-b-2 border-r-2 border-gray-800 bg-gray-200">목</p>
+                                <p class="text-gray-900 text-sm font-black flex h-12 w-full items-center justify-center border-b-2 border-r-2 border-gray-800 bg-gray-200">금</p>
+                                <p class="text-blue-600 text-sm font-black flex h-12 w-full items-center justify-center border-b-2 border-r-2 border-gray-800 bg-gray-200">토</p>
 
                                 <!-- 달력 날짜들 (JavaScript로 동적 생성) -->
                             </div>

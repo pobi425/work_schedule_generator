@@ -36,6 +36,21 @@ async function loadCalendarInfo(year, month) {
         const data = await response.json();
         if (data.success) {
             state.calendarData = data.data;
+
+            // 자동 근무일수 설정 (주말 + 공휴일 기반)
+            state.workDaysPerPerson = data.data.recommended_work_days;
+            state.restDaysPerPerson = data.data.total_rest_days;
+
+            // UI 업데이트 (모달이 열려있을 경우)
+            const workDaysInput = document.getElementById('workDaysPerPerson');
+            const restDaysInput = document.getElementById('restDaysPerPerson');
+            if (workDaysInput) {
+                workDaysInput.value = state.workDaysPerPerson;
+            }
+            if (restDaysInput) {
+                restDaysInput.value = state.restDaysPerPerson;
+            }
+
             renderCalendar();
             updateCalendarTitle();
         }
@@ -84,22 +99,27 @@ function renderCalendar() {
 
 function createEmptyCell() {
     const cell = document.createElement('div');
-    cell.className = 'min-h-[100px] bg-background-light dark:bg-gray-900 border-b border-r border-[#dbdfe6] dark:border-gray-700';
+    cell.className = 'calendar-cell min-h-[100px] bg-gray-100 border-b border-r border-gray-800';
     return cell;
 }
 
 function createDayCell(day, dayData) {
     const cell = document.createElement('div');
-    cell.className = 'calendar-cell min-h-[100px] border-b border-r border-[#dbdfe6] dark:border-gray-700 p-2 relative';
+    cell.className = 'calendar-cell min-h-[100px] border-b border-r border-gray-800 p-2 relative bg-white';
 
     // 날짜 숫자
     const dateNumber = document.createElement('div');
     dateNumber.className = 'text-right mb-2';
 
     const dateSpan = document.createElement('span');
-    dateSpan.className = dayData.is_weekend
-        ? 'text-red-500 font-semibold'
-        : 'text-[#333333] dark:text-gray-300';
+    // 토요일(5) → 파랑, 일요일(6)/공휴일 → 빨강, 평일 → 검정/노랑
+    if (dayData.weekday === 5) {  // 토요일
+        dateSpan.className = 'text-blue-600 font-bold';
+    } else if (dayData.weekday === 6 || dayData.is_holiday) {  // 일요일 또는 공휴일
+        dateSpan.className = 'text-red-600 font-bold';
+    } else {  // 평일
+        dateSpan.className = 'text-yellow-500 dark:text-yellow-400 font-bold';
+    }
     dateSpan.textContent = day;
     dateNumber.appendChild(dateSpan);
 

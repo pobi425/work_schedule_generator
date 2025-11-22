@@ -29,6 +29,27 @@ def calendar_info():
         year = int(data['year'])
         month = int(data['month'])
 
+        # 한국 공휴일 (2025년 기준, 확장 가능)
+        holidays_2025 = {
+            (1, 1): "신정",
+            (1, 28): "설날연휴",
+            (1, 29): "설날",
+            (1, 30): "설날연휴",
+            (3, 1): "삼일절",
+            (3, 3): "대체공휴일",
+            (5, 5): "어린이날",
+            (5, 6): "대체공휴일",
+            (6, 6): "현충일",
+            (8, 15): "광복절",
+            (9, 6): "추석연휴",
+            (9, 7): "추석연휴",
+            (9, 8): "추석",
+            (9, 9): "추석연휴",
+            (10, 3): "개천절",
+            (10, 9): "한글날",
+            (12, 25): "성탄절"
+        }
+
         # 해당 월의 일수
         num_days = calendar.monthrange(year, month)[1]
 
@@ -41,17 +62,41 @@ def calendar_info():
         last_day_weekday = last_day.weekday()
         last_day_name = calendar.day_name[last_day_weekday]
 
-        # 달력 생성 (날짜별 요일)
+        # 달력 생성 (날짜별 요일 및 공휴일)
         days = []
+        weekend_count = 0
+        holiday_count = 0
+
         for day in range(1, num_days + 1):
             date = datetime(year, month, day)
             weekday = date.weekday()
+            is_weekend = weekday in [5, 6]
+
+            # 공휴일 체크 (연도별로 확장 가능)
+            is_holiday = False
+            holiday_name = None
+            if year == 2025 and (month, day) in holidays_2025:
+                is_holiday = True
+                holiday_name = holidays_2025[(month, day)]
+                if not is_weekend:  # 주말이 아닌 공휴일만 카운트
+                    holiday_count += 1
+
+            if is_weekend:
+                weekend_count += 1
+
             days.append({
                 'day': day,
                 'weekday': weekday,
                 'weekday_name': calendar.day_abbr[weekday],
-                'is_weekend': weekday in [5, 6]  # 토요일, 일요일
+                'is_weekend': is_weekend,
+                'is_holiday': is_holiday,
+                'holiday_name': holiday_name
             })
+
+        # 총 휴일 수 = 주말 + 공휴일(주말 제외)
+        total_rest_days = weekend_count + holiday_count
+        # 권장 근무일 수 = 총 일수 - 휴일
+        recommended_work_days = num_days - total_rest_days
 
         return jsonify({
             'success': True,
@@ -63,7 +108,11 @@ def calendar_info():
                 'first_day_name': first_day_name,
                 'last_day_weekday': last_day_weekday,
                 'last_day_name': last_day_name,
-                'days': days
+                'days': days,
+                'weekend_count': weekend_count,
+                'holiday_count': holiday_count,
+                'total_rest_days': total_rest_days,
+                'recommended_work_days': recommended_work_days
             }
         })
 
